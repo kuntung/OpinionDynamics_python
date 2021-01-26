@@ -250,7 +250,7 @@ def CODA_network_opinion(X0, adj_matrix, T, alpha=0.7, beta=0.7, act_threshold=0
 
 def CODA_BC_network_opinion(X0, adj_matrix, T, epsilonL = 0.3, epsilonR = 0.3,
                             alpha=0.7, beta=0.7, act_threshold=0.5):
-    """
+    """返回社会网络下存在着信任交互的CODA观点行为演化结果
 
     Parameters
     ----------
