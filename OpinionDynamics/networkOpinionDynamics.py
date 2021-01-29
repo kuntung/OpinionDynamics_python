@@ -5,8 +5,9 @@ from hkmodel import find_neighbor
 import scipy.io as sio
 import OpinionAnalysis
 
+
 def network_opinion(adj_matrix, X0, T):
-    """进行社会网络下的观点演化分析
+    """每个个体会和直接相连的其他所有个体进行观点交流
 
         Parameters
         ----------
@@ -83,10 +84,10 @@ def CODA_rule(xi, action, alpha, beta):
     """
     Flag = -1
     if action == 1:
-        Flag = 1
+        Flag = 1  # 观点值理论上要增加
     else:
         if action == -1:
-            Flag = 2
+            Flag = 2  # 观点值理论上要减小
 
     if xi == 1:
         Flag = 3  # 观点值已经最明显为1
@@ -94,20 +95,16 @@ def CODA_rule(xi, action, alpha, beta):
         if xi == 0:
             Flag = 4
 
+    if Flag == 3:
+        return 1
+    if Flag == 4:
+        return 0
     if Flag == 1:
-        O1 = xi/(1-xi)*alpha/(1-beta)
-        xi_new = O1/(1+O1)
-    else:
-        if Flag == 2:
-            O2 = xi/(1-xi)*(1-alpha)/beta
-            xi_new = O2/(1+O2)
-        else:
-            if Flag == 3:
-                xi_new = 1
-            else:
-                xi_new = 0
-
-    return xi_new
+        O1 = xi / (1 - xi) * alpha / (1 - beta)
+        return O1 / (1 + O1)
+    if Flag == 2:
+        O2 = xi / (1 - xi) * (1 - alpha) / beta
+        return O2 / (1 + O2)
 
 
 def network_CODA_rule(xi, action, alpha, beta):
@@ -139,20 +136,17 @@ def network_CODA_rule(xi, action, alpha, beta):
         if xi == 0 and Flag == 2:
             Flag = 4  # 观点值无法减小情形
 
+    if Flag == 3:
+        return 1
+    if Flag == 4:
+        return 0
     if Flag == 1:
-        O1 = xi/(1-xi)*alpha/(1-beta)
-        xi_new = O1/(1+O1)
-    else:
-        if Flag == 2:
-            O2 = xi/(1-xi)*(1-alpha)/beta
-            xi_new = O2/(1+O2)
-        else:
-            if Flag == 3:
-                xi_new = 1
-            else:
-                xi_new = 0
-
-    return xi_new
+        O1 = xi / (1 - xi) * alpha / (1 - beta)
+        return O1 / (1 + O1)
+    if Flag == 2:
+        # assert xi < 1, 'xi must smaller than 1'
+        O2 = xi / (1 - xi) * (1 - alpha) / beta
+        return O2 / (1 + O2)
 
 
 def CODA_model(X0, T, alpha=0.7, beta=0.7, act_threshold=0.5):
@@ -193,11 +187,12 @@ def CODA_model(X0, T, alpha=0.7, beta=0.7, act_threshold=0.5):
     for i in range(1, T):
         for j in range(agents_num):
             actor = user_function.randint_digit(0, agents_num, j)
-            X[j, i] = CODA_rule(X[j, i-1], Action[actor, i-1], alpha, beta)
+            X[j, i] = CODA_rule(X[j, i - 1], Action[actor, i - 1], alpha, beta)
         Action[X[:, i] >= act_threshold, i] = 1
         Action[X[:, i] < act_threshold, i] = -1
 
     return X.round(3), Action
+
 
 def CODA_network_opinion(X0, adj_matrix, T, alpha=0.7, beta=0.7, act_threshold=0.5):
     """个体会和当前网络中所有连接个体进行观点交流
@@ -237,18 +232,18 @@ def CODA_network_opinion(X0, adj_matrix, T, alpha=0.7, beta=0.7, act_threshold=0
             P1A1 = CODA_rule(X[j, i - 1], 1, alpha, beta)
             P1A0 = CODA_rule(X[j, i - 1], -1, alpha, beta)
             neighbor_set = adj_matrix[j, :]  # 当前个体j的邻近集
-            action = Action[:, i-1]  # 当前时刻，所有个体的行为意愿
+            action = Action[:, i - 1]  # 当前时刻，所有个体的行为意愿
             neighbor_action = action * neighbor_set
-            neighbor_action[neighbor_action == -1, ] = P1A0
-            neighbor_action[neighbor_action == 1, ] = P1A1
-            X[j, i] = np.dot(neighbor_set, neighbor_action)/np.sum(neighbor_set)
+            neighbor_action[neighbor_action == -1,] = P1A0
+            neighbor_action[neighbor_action == 1,] = P1A1
+            X[j, i] = np.dot(neighbor_set, neighbor_action) / np.sum(neighbor_set)
         Action[X[:, i] >= act_threshold, i] = 1
         Action[X[:, i] < act_threshold, i] = -1
 
     return X.round(3), Action
 
 
-def CODA_BC_network_opinion(X0, adj_matrix, T, epsilonL = 0.3, epsilonR = 0.3,
+def CODA_BC_network_opinion(X0, adj_matrix, T, epsilonL=0.3, epsilonR=0.3,
                             alpha=0.7, beta=0.7, act_threshold=0.5):
     """返回社会网络下存在着信任交互的CODA观点行为演化结果
 
@@ -289,15 +284,15 @@ def CODA_BC_network_opinion(X0, adj_matrix, T, epsilonL = 0.3, epsilonR = 0.3,
         for j in range(agents_num):
             P1A1 = network_CODA_rule(X[j, i - 1], 1, alpha, beta)
             P1A0 = network_CODA_rule(X[j, i - 1], -1, alpha, beta)
-            neighbor = neighbor_set[j, :]  # 当前个体j的邻近集
+            neighbor = neighbor_set[j, :]  # 当前个体j的邻近集,存在着物理连接，并且观点相近
             action = Action[:, i - 1]  # 当前时刻，所有个体的行为意愿
             neighbor_action = action * neighbor
-            neighbor_action[neighbor_action == -1, ] = P1A0
-            neighbor_action[neighbor_action == 1, ] = P1A1
+            neighbor_action[neighbor_action == -1,] = P1A0
+            neighbor_action[neighbor_action == 1,] = P1A1
             if np.count_nonzero(neighbor_action) == 0:
-                X[j, i] = X[j, i-1]
+                X[j, i] = X[j, i - 1]
             else:
-                X[j, i] = np.sum(neighbor_action)/np.count_nonzero(neighbor_action)
+                X[j, i] = np.sum(neighbor_action) / np.count_nonzero(neighbor_action)
         Action[X[:, i] >= act_threshold, i] = 1
         Action[X[:, i] < act_threshold, i] = -1
 
@@ -323,8 +318,8 @@ def find_network_neighbor(adj_matrix, X_t, epsilonL=0.3, epsilonR=0.3):
            根据当前的观点值，判定网络中和自身观点相近个体集合
 
            """
-    opinion_neighbor = find_neighbor(X_t, epsilonL, epsilonR)
-    neighbor_set = opinion_neighbor * adj_matrix
+    opinion_neighbor = find_neighbor(X_t, epsilonL, epsilonR)  # 观点邻近矩阵
+    neighbor_set = opinion_neighbor * adj_matrix  # 观点邻近，且存在物理连接
 
     return neighbor_set
 
@@ -338,7 +333,7 @@ if __name__ == '__main__':
     # alpha = 0.7
     # beta = 0.7
     # act_threshold = 0.5
-    #生成自定义邻接矩阵
+    # 生成自定义邻接矩阵
     T = 20
     agents_num = 200
     k = 20

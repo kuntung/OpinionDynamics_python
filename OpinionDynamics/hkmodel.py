@@ -1,5 +1,6 @@
 import numpy as np
 
+from OpinionDynamics.user_function import plot_opinion
 
 np.set_printoptions(precision=4, suppress=True)
 

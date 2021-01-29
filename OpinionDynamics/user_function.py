@@ -92,11 +92,12 @@ def plot_opinion(opinion_profile):#定义绘制观点动力学函数
     x = range(0, T)
     X0=opinion_profile[:, 0]
     for i in range(agents_num):
-        plt.plot(range(0, T), opinion_profile[i, :], color=[X0[i], abs(abs(1-X0[i])), abs(0.5-X0[i])])
-    plt.xlabel('time')
-    plt.ylabel('Opinion value')
+        plt.plot(range(0, T), opinion_profile[i, :], color=[X0[i], abs(0.7-abs(X0[i])), abs(0.4-abs(X0[i]))])
+    plt.xlabel('time', fontdict={'weight': 'normal', 'size': 20})
+    plt.ylabel('Opinion value', fontdict={'weight': 'normal', 'size': 20})
     x_ticklabels = range(1, T+1)
     plt.xticks(x, x_ticklabels)
+    plt.axis([0, T-1, 0, 1])
     plt.show()
 
 
